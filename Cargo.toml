@@ -3,7 +3,7 @@ name = "lcv"
 version = "0.1.0"
 edition = "2024"
 authors = ["MrFixThis <mrfixthis55@gmail.com>"]
-description = "TUI-based line coding visualizer"
+description = "Playground for line codes"
 repository = "https://github.com/MrFixThis/lcv"
 
 [dependencies]

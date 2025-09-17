@@ -14,20 +14,17 @@ use signal_hook::{consts::signal, low_level};
 use tokio::{
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
     task::JoinHandle,
+    time::Instant,
 };
 use tokio_util::sync::CancellationToken;
-
-const GLOB_TICK_RATE: f64 = 6.0;
-const GLOB_FRAME_RATE: f64 = 4.0;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
     Init,
     Quit,
-    Tick,
-    Render,
     FocusGained,
     FocusLost,
+    Tick(Instant),
     Resize(u16, u16),
     Key(KeyEvent),
     Paste(String),
@@ -57,6 +54,8 @@ impl DerefMut for Terminal {
 }
 
 impl Terminal {
+    const GLOB_TICK_RATE: f64 = 6.0;
+
     pub fn build() -> anyhow::Result<Self> {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
         Ok(Self {
@@ -128,9 +127,7 @@ impl Terminal {
         let event_tx = self.event_tx.clone();
         let mut stream = EventStream::new();
         let mut tick_interval =
-            tokio::time::interval(Duration::from_secs_f64(1.0 / GLOB_TICK_RATE));
-        let mut render_interval =
-            tokio::time::interval(Duration::from_secs_f64(1.0 / GLOB_FRAME_RATE));
+            tokio::time::interval(Duration::from_secs_f64(1.0 / Self::GLOB_TICK_RATE));
 
         self.task_handle = tokio::spawn(async move {
             tracing::info!("Terminal event loop initialized.");
@@ -138,8 +135,7 @@ impl Terminal {
 
             loop {
                 tokio::select! {
-                    _ = tick_interval.tick() => event_tx.send(Event::Tick)?,
-                    _ = render_interval.tick() => event_tx.send(Event::Render)?,
+                    delta = tick_interval.tick() => event_tx.send(Event::Tick(delta))?,
                     _ = cancel_tok.cancelled() => {
                         event_tx.send(Event::Quit)?;
                         break;

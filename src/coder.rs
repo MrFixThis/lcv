@@ -39,7 +39,6 @@ impl SignalElem {
     }
 }
 
-#[allow(unused_variables)]
 pub trait LineCoder: 'static {
     fn encode(&self, bits: &[u8]) -> Box<[SignalElem]>;
 
@@ -48,6 +47,7 @@ pub trait LineCoder: 'static {
     fn on_v(&mut self, v: f32) -> anyhow::Result<()>;
 
     fn on_duty(&mut self, duty: f32) -> anyhow::Result<()> {
+        let _ = duty;
         Ok(())
     }
 
