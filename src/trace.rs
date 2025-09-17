@@ -3,7 +3,7 @@ use std::{env, fs, panic, path::PathBuf, process, sync::LazyLock};
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt};
 
-use crate::term::Terminal;
+use crate::tui::Tui;
 
 static DATA_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
     match env::var(format!(
@@ -29,7 +29,7 @@ pub fn setup_panic_hook() {
         .create_panic_handler();
 
     panic::set_hook(Box::new(move |info| {
-        if let Err(err) = Terminal::build().map(|mut term| term.exit()) {
+        if let Err(err) = Tui::build().map(|mut term| term.exit()) {
             tracing::error!("Error transitioning terminal to normal mode: {err}");
         }
 

@@ -1,96 +1,110 @@
 pub mod banner;
 pub mod style;
-pub mod widget;
 
-use crossterm::event::KeyEvent;
-use ratatui::layout::Rect;
-use std::sync::Arc;
-use tokio::{
-    sync::{
-        Mutex,
-        mpsc::{self, UnboundedReceiver, UnboundedSender},
-    },
-    task::JoinHandle,
-    time::Instant,
+use crossterm::{
+    cursor,
+    event::KeyEvent,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
 };
+use ratatui::{crossterm::terminal, layout::Rect, prelude::CrosstermBackend, widgets::WidgetRef};
+use signal_hook::{consts::signal, low_level};
+use tokio::time::Instant;
 
-use crate::term::{Event, Terminal};
+pub trait ActiveWidget: WidgetRef {
+    fn init(&mut self) {}
 
-pub enum Action {
-    Init,
-    Quit,
-    Tick(Instant),
-    Key(KeyEvent),
-    Paste(String),
+    fn terminate(&mut self) {}
+
+    fn handle_key(&mut self, key: KeyEvent) {
+        let _ = key;
+    }
+
+    fn tick(&mut self, delta: Instant) {
+        let _ = delta;
+    }
+
+    #[inline]
+    fn boxed(self) -> Box<dyn WidgetRef + 'static>
+    where
+        Self: Sized + 'static,
+    {
+        Box::from(self)
+    }
 }
 
 #[derive(Debug)]
-pub struct App {
-    term: Arc<Mutex<Terminal>>,
-    map_handle: JoinHandle<anyhow::Result<()>>,
-    act_tx: UnboundedSender<Action>,
-    act_rx: UnboundedReceiver<Action>,
+pub struct Tui {
+    term: ratatui::Terminal<CrosstermBackend<std::io::Stdout>>,
+    should_quit: bool,
 }
 
-impl App {
+impl Tui {
     pub fn build() -> anyhow::Result<Self> {
-        let (act_tx, act_rx) = mpsc::unbounded_channel();
         Ok(Self {
-            term: Arc::new(Mutex::new(Terminal::build()?)),
-            map_handle: tokio::spawn(async move { Ok(()) }),
-            act_tx,
-            act_rx,
+            term: ratatui::Terminal::new(CrosstermBackend::new(std::io::stdout()))?,
+            should_quit: false,
         })
     }
 
-    pub async fn run(&mut self) -> anyhow::Result<()> {
-        tracing::info!("TUI initialized.");
-        self.map_handle = self.spawn_mapper();
+    pub fn enter(&mut self) -> anyhow::Result<()> {
+        terminal::enable_raw_mode()?;
+        crossterm::execute!(std::io::stdout(), EnterAlternateScreen, cursor::Hide)?;
+        tracing::info!("Terminal transitioned to raw mode.");
 
-        while let Some(action) = self.act_rx.recv().await {
-            match action {
-                Action::Quit => self.quit().await?,
-                Action::Init => todo!(),
-                Action::Tick(delta) => todo!(),
-                Action::Key(ke) => todo!(),
-                Action::Paste(_) => {},
-            }
+        Ok(())
+    }
+
+    pub fn exit(&mut self) -> anyhow::Result<()> {
+        if terminal::is_raw_mode_enabled()? {
+            self.term.flush()?;
+            crossterm::execute!(std::io::stdout(), LeaveAlternateScreen, cursor::Show)?;
+            terminal::disable_raw_mode()?;
+            tracing::info!("Terminal transitioned to normal mode.");
         }
 
         Ok(())
     }
 
-    async fn quit(&self) -> anyhow::Result<()> {
-        self.term.lock().await.exit()?;
-        if !self.map_handle.is_finished() {
-            self.map_handle.abort();
-        }
-        tracing::info!("TUI disposed.");
+    #[inline]
+    pub fn resume(&mut self) -> anyhow::Result<()> {
+        #[cfg(windows)]
+        self.enter()?;
         Ok(())
     }
 
-    fn spawn_mapper(&self) -> JoinHandle<anyhow::Result<()>> {
-        let act_tx = self.act_tx.clone();
-        let term = Arc::clone(&self.term);
+    pub fn suspend(&mut self) -> anyhow::Result<()> {
+        self.exit()?;
+        #[cfg(not(windows))]
+        low_level::raise(signal::SIGTSTP)?;
+        Ok(())
+    }
 
-        tokio::spawn(async move {
-            loop {
-                let mut term = term.lock().await;
-                if let Some(event) = term.next_event().await {
-                    match event {
-                        Event::Init => act_tx.send(Action::Init)?,
-                        Event::Tick(delta) => act_tx.send(Action::Tick(delta))?,
-                        Event::Key(ke) => act_tx.send(Action::Key(ke))?,
-                        Event::Paste(cont) => act_tx.send(Action::Paste(cont))?,
-                        Event::Resize(w, h) => term.resize(Rect::new(0, 0, w, h))?,
-                        Event::FocusGained => term.resume()?,
-                        Event::FocusLost => term.suspend()?,
-                        Event::Quit => break,
-                    }
-                }
-            }
+    pub fn init(&mut self) {}
 
-            Ok(())
-        })
+    pub fn terminate(&mut self) {}
+
+    pub fn handle_key(&mut self, key: KeyEvent) {
+        let _ = key;
+    }
+
+    pub fn tick(&mut self, delta: Instant) {
+        let _ = delta;
+    }
+
+    pub fn render(&mut self) -> anyhow::Result<()> {
+        // TODO: Render here
+        self.term.flush()?;
+        Ok(())
+    }
+
+    #[inline]
+    pub fn should_quit(&self) -> bool {
+        self.should_quit
+    }
+
+    #[inline]
+    pub fn resize(&mut self, width: u16, height: u16) -> anyhow::Result<()> {
+        self.term.resize(Rect::new(0, 0, width, height))?;
+        Ok(())
     }
 }

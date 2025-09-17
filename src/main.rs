@@ -1,6 +1,7 @@
 #[macro_use]
 mod util;
 
+mod app;
 mod coder;
 mod term;
 mod trace;
@@ -10,6 +11,5 @@ mod tui;
 async fn main() -> anyhow::Result<()> {
     trace::setup_tracing()?;
     trace::setup_panic_hook();
-
-    Ok(())
+    app::App::build()?.run().await
 }

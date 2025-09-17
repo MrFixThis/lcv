@@ -7,19 +7,19 @@ use ratatui::{
 
 use crate::tui::style::Theme;
 
-use super::widget::ActiveWidget;
+use super::ActiveWidget;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub(super) struct Banner;
 
 impl Banner {
     const LOGO: &'static str = r"
-██╗     ██████╗██╗   ██╗
-██║    ██╔════╝██║   ██║
-██║    ██║     ██║   ██║
-██║    ██║     ╚██╗ ██╔╝
-██████╗╚██████╗ ╚████╔╝
-╚═════╝ ╚═════╝  ╚═══╝  
+██╗      ██████╗██╗   ██╗
+██║     ██╔════╝██║   ██║
+██║     ██║     ██║   ██║
+██║     ██║     ╚██╗ ██╔╝
+███████╗╚██████╗ ╚████╔╝
+╚══════╝ ╚═════╝  ╚═══╝  
 ";
 }
 
@@ -34,11 +34,10 @@ impl WidgetRef for Banner {
             .borders(Borders::ALL)
             .style(Theme::BORDER_PRIMARY);
 
-        let container = Paragraph::new(Text::from(Self::LOGO).style(Theme::TEXT))
+        Paragraph::new(Text::from(Self::LOGO).style(Theme::TEXT))
             .block(block)
-            .centered();
-
-        container.render(area, buf);
+            .centered()
+            .render(area, buf);
     }
 }
 
