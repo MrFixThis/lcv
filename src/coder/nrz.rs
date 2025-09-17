@@ -2,11 +2,16 @@ use crate::util;
 
 use super::{LineCoder, SignalElem};
 
-/// A by level Non-Return-to-Zero line encoder.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Nrzl {
     tb: f32,
     v: f32,
+}
+
+impl Default for Nrzl {
+    fn default() -> Self {
+        Self { tb: 1.0, v: 1.0 }
+    }
 }
 
 impl Nrzl {
@@ -55,11 +60,16 @@ impl LineCoder for Nrzl {
     }
 }
 
-/// An inversing Non-Return-to-Zero line encoder.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Nrzi {
     tb: f32,
     v: f32,
+}
+
+impl Default for Nrzi {
+    fn default() -> Self {
+        Self { tb: 1.0, v: 1.0 }
+    }
 }
 
 impl Nrzi {

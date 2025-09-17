@@ -2,10 +2,16 @@ use crate::util;
 
 use super::{LineCoder, SignalElem};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Mlt3 {
     tb: f32,
     v: f32,
+}
+
+impl Default for Mlt3 {
+    fn default() -> Self {
+        Self { tb: 1.0, v: 1.0 }
+    }
 }
 
 impl Mlt3 {

@@ -2,10 +2,16 @@ use crate::util;
 
 use super::{LineCoder, SignalElem};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Ami {
     tb: f32,
     v: f32,
+}
+
+impl Default for Ami {
+    fn default() -> Self {
+        Self { tb: 1.0, v: 1.0 }
+    }
 }
 
 impl Ami {

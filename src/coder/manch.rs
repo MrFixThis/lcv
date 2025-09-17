@@ -2,10 +2,16 @@ use crate::{coder::SignalElem, util};
 
 use super::LineCoder;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Manchester {
     tb: f32,
     v: f32,
+}
+
+impl Default for Manchester {
+    fn default() -> Self {
+        Self { tb: 1.0, v: 1.0 }
+    }
 }
 
 impl Manchester {
@@ -177,11 +183,17 @@ mod tests {
         let enc = Manchester::build(1.0, 1.0).unwrap();
 
         let s0 = [0u8; 1];
-        let e0 = [SignalElem::new(0.0, 0.5, 1.0), SignalElem::new(0.5, 1.0, -1.0)];
+        let e0 = [
+            SignalElem::new(0.0, 0.5, 1.0),
+            SignalElem::new(0.5, 1.0, -1.0),
+        ];
         assert_eq!(enc.encode(&s0).as_ref(), &e0);
 
         let s1 = [1u8; 1];
-        let e1 = [SignalElem::new(0.0, 0.5, -1.0), SignalElem::new(0.5, 1.0, 1.0)];
+        let e1 = [
+            SignalElem::new(0.0, 0.5, -1.0),
+            SignalElem::new(0.5, 1.0, 1.0),
+        ];
         assert_eq!(enc.encode(&s1).as_ref(), &e1);
     }
 }
