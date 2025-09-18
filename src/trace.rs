@@ -21,7 +21,7 @@ static LOG_FILE: LazyLock<PathBuf> = LazyLock::new(|| DATA_DIR.join("log"));
 static LOG_ENV_VAR: LazyLock<Box<str>> =
     LazyLock::new(|| format!("{}_LOG", env!("CARGO_PKG_NAME").to_uppercase()).into());
 
-pub fn setup_panic_hook() {
+pub(super) fn setup_panic_hook() {
     let panic_hook = better_panic::Settings::default()
         .message(format!(
             "This may be a critical error. Consider reporting it at {}",
@@ -48,7 +48,7 @@ pub fn setup_panic_hook() {
     }));
 }
 
-pub fn setup_tracing() -> anyhow::Result<()> {
+pub(super) fn setup_tracing() -> anyhow::Result<()> {
     fs::create_dir_all(&*DATA_DIR)?;
     let file = fs::File::create(&*LOG_FILE)?;
 

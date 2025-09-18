@@ -62,7 +62,7 @@ impl LineCoder for Mlt3 {
 mod tests {
     use crate::coder::{LineCoder, SignalElem, mlt3::Mlt3};
 
-    test_len_case!(test_mlt3_len4_cases: Mlt3::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_mlt3_len4_cases: Mlt3::build(1.0, 1.0).unwrap() => [
         ([0,0,0,0], [
             SignalElem::new(0.0,1.0, 0.0),
             SignalElem::new(1.0,2.0, 0.0),
@@ -89,7 +89,7 @@ mod tests {
         ]),
     ]);
 
-    test_len_case!(test_mlt3_len6_cases: Mlt3::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_mlt3_len6_cases: Mlt3::build(1.0, 1.0).unwrap() => [
         ([1,0,1,0,1,0], [
             SignalElem::new(0.0,1.0, 1.0),
             SignalElem::new(1.0,2.0, 1.0),
@@ -108,7 +108,7 @@ mod tests {
         ]),
     ]);
 
-    test_len_case!(test_mlt3_len8_cases: Mlt3::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_mlt3_len8_cases: Mlt3::build(1.0, 1.0).unwrap() => [
         ([0,0,1,1,0,0,1,1], [
             SignalElem::new(0.0,1.0, 0.0),
             SignalElem::new(1.0,2.0, 0.0),

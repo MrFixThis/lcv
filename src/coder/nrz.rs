@@ -118,7 +118,7 @@ mod tests {
     use super::{Nrzi, Nrzl};
     use crate::coder::{LineCoder, SignalElem};
 
-    test_len_case!(test_nrzl_len4_cases: Nrzl::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_nrzl_len4_cases: Nrzl::build(1.0, 1.0).unwrap() => [
         ([0, 0, 0, 0],
             [
                 SignalElem::new(0.0, 1.0, -1.0),
@@ -153,7 +153,7 @@ mod tests {
         ),
     ]);
 
-    test_len_case!(test_nrzi_len4_cases: Nrzi::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_nrzi_len4_cases: Nrzi::build(1.0, -1.0).unwrap() => [
         ([0, 0, 0, 0],
             [
                 SignalElem::new(0.0, 1.0, -1.0),
@@ -188,7 +188,7 @@ mod tests {
         ),
     ]);
 
-    test_len_case!(test_nrzl_len6_cases: Nrzl::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_nrzl_len6_cases: Nrzl::build(1.0, 1.0).unwrap() => [
         ([1, 0, 1, 0, 1, 0],
             [
                 SignalElem::new(0.0, 1.0, 1.0),
@@ -211,7 +211,7 @@ mod tests {
         ),
     ]);
 
-    test_len_case!(test_nrzi_len6_cases: Nrzi::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_nrzi_len6_cases: Nrzi::build(1.0, -1.0).unwrap() => [
         ([1, 0, 1, 0, 1, 0],
             [
                 SignalElem::new(0.0, 1.0, 1.0),
@@ -234,7 +234,7 @@ mod tests {
         ),
     ]);
 
-    test_len_case!(test_nrzl_len8_cases: Nrzl::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_nrzl_len8_cases: Nrzl::build(1.0, 1.0).unwrap() => [
         ([0, 0, 1, 1, 0, 0, 1, 1],
             [
                 SignalElem::new(0.0, 1.0, -1.0),
@@ -261,7 +261,7 @@ mod tests {
         ),
     ]);
 
-    test_len_case!(test_nrzi_len8_cases: Nrzi::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_nrzi_len8_cases: Nrzi::build(1.0, -1.0).unwrap() => [
         ([0, 0, 1, 1, 0, 0, 1, 1],
             [
                 SignalElem::new(0.0, 1.0, -1.0),

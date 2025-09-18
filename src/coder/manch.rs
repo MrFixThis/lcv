@@ -75,7 +75,7 @@ impl LineCoder for Manchester {
 mod tests {
     use crate::coder::{LineCoder, SignalElem, manch::Manchester};
 
-    test_len_case!(test_manchester_len4_cases: Manchester::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_manchester_len4_cases: Manchester::build(1.0, 1.0).unwrap() => [
         ([0,0,0,0], [
             SignalElem::new(0.0,0.5, 1.0),
             SignalElem::new(0.5,1.0,-1.0),
@@ -108,7 +108,7 @@ mod tests {
         ]),
     ]);
 
-    test_len_case!(test_manchester_len6_cases: Manchester::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_manchester_len6_cases: Manchester::build(1.0, 1.0).unwrap() => [
         ([0,1,1,1,1,0], [
             SignalElem::new(0.0,0.5, 1.0),
             SignalElem::new(0.5,1.0,-1.0),
@@ -139,7 +139,7 @@ mod tests {
         ]),
     ]);
 
-    test_len_case!(test_manchester_len8_cases: Manchester::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_manchester_len8_cases: Manchester::build(1.0, 1.0).unwrap() => [
         ([0,0,1,1,0,0,1,1], [
             SignalElem::new(0.0,0.5, 1.0),
             SignalElem::new(0.5,1.0,-1.0),

@@ -7,7 +7,7 @@ use nom::{
 
 use crate::coder::CoderInitErr;
 
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! test_len_case {
     ($name:ident: $enc:expr => [
         $(

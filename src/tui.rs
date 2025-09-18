@@ -1,5 +1,5 @@
-pub mod banner;
-pub mod style;
+mod banner;
+mod style;
 
 use std::io::Write;
 
@@ -18,7 +18,7 @@ use ratatui::{
 use signal_hook::{consts::signal, low_level};
 use tokio::time::Instant;
 
-pub trait ActiveWidget: WidgetRef {
+trait ActiveWidget: WidgetRef {
     fn init(&mut self) {}
 
     fn terminate(&mut self) {}
@@ -59,7 +59,7 @@ impl Components {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-pub enum TuiMode {
+enum TuiMode {
     #[default]
     Parameters,
     Visualizer,

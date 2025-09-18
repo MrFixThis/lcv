@@ -76,7 +76,7 @@ impl LineCoder for Rz {
 mod tests {
     use crate::coder::{LineCoder, SignalElem, rz::Rz};
 
-    test_len_case!(test_rz_len4_cases: Rz::build(1.0, 1.0, 0.5).unwrap() => [
+    crate::test_len_case!(test_rz_len4_cases: Rz::build(1.0, 1.0, 0.5).unwrap() => [
         ([0,0,0,0], [
             SignalElem::new(0.0,0.5,-1.0),
             SignalElem::new(0.5,1.0,0.0),
@@ -109,7 +109,7 @@ mod tests {
         ]),
     ]);
 
-    test_len_case!(test_rz_len6_cases: Rz::build(1.0, 1.0, 0.5).unwrap() => [
+    crate::test_len_case!(test_rz_len6_cases: Rz::build(1.0, 1.0, 0.5).unwrap() => [
         ([0,1,1,1,1,0], [
             SignalElem::new(0.0,0.5,-1.0),
             SignalElem::new(0.5,1.0,0.0),

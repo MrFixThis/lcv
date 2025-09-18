@@ -62,7 +62,7 @@ impl LineCoder for Ami {
 mod tests {
     use crate::coder::{LineCoder, SignalElem, ami::Ami};
 
-    test_len_case!(test_ami_len4_cases: Ami::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_ami_len4_cases: Ami::build(1.0, -1.0).unwrap() => [
         ([0,0,0,0], [
             SignalElem::new(0.0,1.0, 0.0),
             SignalElem::new(1.0,2.0, 0.0),
@@ -83,7 +83,7 @@ mod tests {
         ]),
     ]);
 
-    test_len_case!(test_ami_len6_cases: Ami::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_ami_len6_cases: Ami::build(1.0, -1.0).unwrap() => [
         ([0,1,1,1,1,0], [
             SignalElem::new(0.0,1.0, 0.0),
             SignalElem::new(1.0,2.0, 1.0),
@@ -102,7 +102,7 @@ mod tests {
         ]),
     ]);
 
-    test_len_case!(test_ami_len8_cases: Ami::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_ami_len8_cases: Ami::build(1.0, -1.0).unwrap() => [
         ([0,0,1,1,0,0,1,1], [
             SignalElem::new(0.0,1.0, 0.0),
             SignalElem::new(1.0,2.0, 0.0),
