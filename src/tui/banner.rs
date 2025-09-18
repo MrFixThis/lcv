@@ -2,7 +2,7 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph, Widget, WidgetRef},
+    widgets::{Block, BorderType, Borders, Paragraph, Widget, WidgetRef},
 };
 
 use crate::tui::style::Theme;
@@ -31,6 +31,7 @@ impl WidgetRef for Banner {
         let block = Block::new()
             .title_top(Line::from(title).left_aligned().style(Theme::HINT))
             .title_bottom(Line::from(footer).right_aligned().style(Theme::HINT))
+            .border_type(BorderType::Thick)
             .borders(Borders::ALL)
             .style(Theme::BORDER_PRIMARY);
 
