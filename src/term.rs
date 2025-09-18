@@ -64,17 +64,21 @@ impl Terminal {
                     delta = tick_interval.tick() => event_tx.send(Event::Tick(delta))?,
                     Some(result) = stream.next() => match result {
                         Err(err) => tracing::error!("Error capturing event from terminal: {err}"),
-                        Ok(event) => match event {
-                            CTEvent::FocusGained => event_tx.send(Event::FocusGained)?,
-                            CTEvent::FocusLost => event_tx.send(Event::FocusLost)?,
-                            CTEvent::Key(ke) => event_tx.send(Event::Key(ke))?,
-                            CTEvent::Resize(a, b) => event_tx.send(Event::Resize(a, b))?,
-                            _ => {}
+                        Ok(event) => {
+                            tracing::debug!("Got terminal event: {event:?}");
+                            match event {
+                                CTEvent::FocusGained => event_tx.send(Event::FocusGained)?,
+                                CTEvent::FocusLost => event_tx.send(Event::FocusLost)?,
+                                CTEvent::Key(ke) => event_tx.send(Event::Key(ke))?,
+                                CTEvent::Resize(a, b) => event_tx.send(Event::Resize(a, b))?,
+                                _ => {}
+                            }
                         }
                     }
                 }
             }
 
+            tracing::info!("Terminal event loop terminated.");
             Ok(())
         });
     }
@@ -83,6 +87,5 @@ impl Terminal {
     pub fn stop(&self) {
         self.cancel_tok.cancel();
         self.task_handle.abort();
-        tracing::info!("Terminal event loop terminated.");
     }
 }

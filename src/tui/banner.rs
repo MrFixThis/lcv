@@ -9,7 +9,7 @@ use crate::tui::style::Theme;
 
 use super::ActiveWidget;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub(super) struct Banner;
 
 impl Banner {

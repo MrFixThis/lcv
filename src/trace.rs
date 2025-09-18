@@ -1,5 +1,6 @@
 use std::{env, fs, panic, path::PathBuf, process, sync::LazyLock};
 
+use tracing::level_filters::LevelFilter;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt};
 
@@ -16,8 +17,9 @@ static DATA_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
             .unwrap_or_else(|| PathBuf::from(".")),
     }
 });
-static LOG_FILE: LazyLock<PathBuf> =
-    LazyLock::new(|| DATA_DIR.join(format!("{}.log", env!("CARGO_PKG_NAME"))));
+static LOG_FILE: LazyLock<PathBuf> = LazyLock::new(|| DATA_DIR.join("log"));
+static LOG_ENV_VAR: LazyLock<Box<str>> =
+    LazyLock::new(|| format!("{}_LOG", env!("CARGO_PKG_NAME").to_uppercase()).into());
 
 pub fn setup_panic_hook() {
     let panic_hook = better_panic::Settings::default()
@@ -50,12 +52,21 @@ pub fn setup_tracing() -> anyhow::Result<()> {
     fs::create_dir_all(&*DATA_DIR)?;
     let file = fs::File::create(&*LOG_FILE)?;
 
+    unsafe {
+        env::set_var(
+            EnvFilter::DEFAULT_ENV,
+            env::var(EnvFilter::DEFAULT_ENV)
+                .or_else(|_| env::var(LOG_ENV_VAR.as_ref()))
+                .unwrap_or(LevelFilter::INFO.to_string()),
+        );
+    }
+
     tracing::subscriber::set_global_default(
         tracing_subscriber::registry()
             .with(ErrorLayer::default())
             .with(
                 tracing_subscriber::fmt::layer()
-                    .with_ansi(false)
+                    .with_ansi(true)
                     .with_writer(file)
                     .with_file(true)
                     .with_line_number(false)
