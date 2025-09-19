@@ -31,7 +31,7 @@ impl WidgetRef for Banner {
         let block = Block::new()
             .title_top(Line::from(title).left_aligned().style(Theme::HINT))
             .title_bottom(Line::from(footer).right_aligned().style(Theme::HINT))
-            .border_type(BorderType::Thick)
+            .border_type(BorderType::Double)
             .borders(Borders::ALL)
             .style(Theme::BORDER_PRIMARY);
 

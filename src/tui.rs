@@ -1,6 +1,8 @@
 mod banner;
 mod footer;
+mod params;
 mod style;
+mod visualizer;
 
 use std::io::Write;
 
@@ -19,7 +21,8 @@ use ratatui::{
     widgets::WidgetRef,
 };
 use signal_hook::{consts::signal, low_level};
-use tokio::time::Instant;
+use tokio::{sync::mpsc, time::Instant};
+use visualizer::Visualizer;
 
 trait ActiveWidget: WidgetRef {
     fn init(&mut self) {}
@@ -38,6 +41,7 @@ trait ActiveWidget: WidgetRef {
 #[derive(Debug)]
 struct Components {
     banner: Banner,
+    visualizer: Visualizer,
     footer: Footer,
 }
 
@@ -46,21 +50,21 @@ impl Components {
         self.comps_mut(|comp| comp.init());
     }
 
-    fn render(&mut self, area: Rect, buf: &mut Buffer) -> anyhow::Result<()> {
-        let chunks = Layout::vertical([
+    fn render(&mut self, area: Rect, buf: &mut Buffer) {
+        let [top, middle, bottom] = Layout::vertical([
             Constraint::Length(10),
             Constraint::Fill(1),
             Constraint::Length(1),
         ])
-        .split(area);
-        let upper_chunks = Layout::horizontal([Constraint::Percentage(100), Constraint::Min(35)])
-            .flex(Flex::Start)
-            .split(chunks[0]);
+        .areas(area);
+        let [_top_left, top_right] =
+            Layout::horizontal([Constraint::Percentage(100), Constraint::Min(35)])
+                .flex(Flex::Start)
+                .areas(top);
 
-        self.banner.render_ref(upper_chunks[1], buf);
-        self.footer.render_ref(chunks[2], buf);
-
-        Ok(())
+        self.banner.render_ref(top_right, buf);
+        self.visualizer.render_ref(middle, buf);
+        self.footer.render_ref(bottom, buf);
     }
 
     fn terminate(&mut self) {
@@ -75,14 +79,19 @@ impl Components {
     where
         F: FnMut(&mut dyn ActiveWidget),
     {
-        <[&mut dyn ActiveWidget; 2]>::into_iter([&mut self.banner, &mut self.footer]).for_each(f);
+        <[&mut dyn ActiveWidget; 3]>::into_iter([
+            &mut self.banner,
+            &mut self.visualizer,
+            &mut self.footer,
+        ])
+        .for_each(f);
     }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
 enum TuiMode {
     #[default]
-    Parameters,
+    Params,
     Visualizer,
     Help,
 }
@@ -90,7 +99,7 @@ enum TuiMode {
 impl TuiMode {
     #[inline]
     fn is_parameters(&self) -> bool {
-        matches!(self, Self::Parameters)
+        matches!(self, Self::Params)
     }
 
     #[inline]
@@ -115,6 +124,7 @@ pub struct Tui {
 
 impl Tui {
     pub fn build() -> anyhow::Result<Self> {
+        let (_sig_tx, sig_rx) = mpsc::unbounded_channel();
         Ok(Self {
             term: ratatui::Terminal::new(CrosstermBackend::new(std::io::stdout()))?,
             should_quit: false,
@@ -122,6 +132,7 @@ impl Tui {
             _last_mode: TuiMode::default(),
             components: Components {
                 banner: Banner,
+                visualizer: Visualizer::new(sig_rx),
                 footer: Footer,
             },
         })
@@ -177,7 +188,7 @@ impl Tui {
 
     pub fn render(&mut self) -> anyhow::Result<()> {
         self.components
-            .render(self.term.get_frame().area(), self.term.current_buffer_mut())?;
+            .render(self.term.get_frame().area(), self.term.current_buffer_mut());
         self.flush()
     }
 
@@ -199,14 +210,14 @@ impl Tui {
                 KeyCode::Esc => self.should_quit = true,
                 KeyCode::Tab => self.toggle_help(),
                 KeyCode::Up if modifiers.contains(KeyModifiers::SHIFT) => {
-                    self.swap_mode(TuiMode::Parameters);
+                    self.swap_mode(TuiMode::Params);
                 }
                 KeyCode::Down if modifiers.contains(KeyModifiers::SHIFT) => {
                     self.swap_mode(TuiMode::Visualizer);
                 }
                 _ => match self.mode {
-                    TuiMode::Parameters => {}
-                    TuiMode::Visualizer => {}
+                    TuiMode::Params => {}
+                    TuiMode::Visualizer => self.components.visualizer.handle_key(key),
                     TuiMode::Help => {}
                 },
             }

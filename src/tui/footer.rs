@@ -18,7 +18,7 @@ impl WidgetRef for Footer {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         let sign = Line::from_iter([
             Span::raw("with").style(Theme::TEXT),
-            Span::raw(" <3").style(Theme::WARN),
+            Span::raw(" <3").style(Theme::ERROR),
             Span::raw(" by ").style(Theme::TEXT),
             Span::raw(Self::AUTHOR).style(Theme::TITLE),
             Span::raw(" "),
@@ -39,10 +39,11 @@ impl WidgetRef for Footer {
         ])
         .left_aligned();
 
-        let layout = Layout::horizontal([Constraint::Percentage(80), Constraint::Percentage(20)])
-            .split(area);
-        instructions.render_ref(layout[0], buf);
-        sign.render_ref(layout[1], buf);
+        let [left, right] =
+            Layout::horizontal([Constraint::Percentage(80), Constraint::Percentage(20)])
+                .areas(area);
+        instructions.render_ref(left, buf);
+        sign.render_ref(right, buf);
     }
 }
 

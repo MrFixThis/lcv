@@ -12,41 +12,41 @@ use std::{
 };
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct SignalElem {
-    pub ti: f32,
-    pub tf: f32,
-    pub lvl: f32,
+pub struct SigElement {
+    ti: f64,
+    tf: f64,
+    lvl: f64,
 }
 
-impl SignalElem {
-    pub fn new(ti: f32, tf: f32, lvl: f32) -> Self {
+impl SigElement {
+    pub fn new(ti: f64, tf: f64, lvl: f64) -> Self {
         Self { ti, tf, lvl }
     }
 
     #[inline(always)]
-    pub fn ti(&self) -> f32 {
+    pub fn ti(&self) -> f64 {
         self.ti
     }
 
     #[inline(always)]
-    pub fn tf(&self) -> f32 {
+    pub fn tf(&self) -> f64 {
         self.tf
     }
 
     #[inline(always)]
-    pub fn lvl(&self) -> f32 {
+    pub fn lvl(&self) -> f64 {
         self.lvl
     }
 }
 
 pub trait LineCoder: 'static {
-    fn encode(&self, bits: &[u8]) -> Box<[SignalElem]>;
+    fn encode(&self, bits: &[u8]) -> Box<[SigElement]>;
 
-    fn on_tb(&mut self, tb: f32) -> anyhow::Result<()>;
+    fn on_tb(&mut self, tb: f64) -> anyhow::Result<()>;
 
-    fn on_v(&mut self, v: f32) -> anyhow::Result<()>;
+    fn on_v(&mut self, v: f64) -> anyhow::Result<()>;
 
-    fn on_duty(&mut self, duty: f32) -> anyhow::Result<()> {
+    fn on_duty(&mut self, duty: f64) -> anyhow::Result<()> {
         let _ = duty;
         Ok(())
     }

@@ -27,10 +27,16 @@ ratatui = { version = "0.29.0", features = [
     "all-widgets",
     "unstable-widget-ref",
 ] }
+tui-input = { version = "0.14.0", default-features = false }
 crossterm = { version = "0.29.0", features = ["windows", "event-stream"] }
 signal-hook = { version = "0.3.18", default-features = false }
+strum = "0.27"
+strum_macros = "0.27"
 directories = "6.0.0"
 anyhow = "1.0.99"
 better-panic = "=0.3.0"
 serde = "1.0.219"
 nom = "8.0.0"
+
+[profile.release]
+lto = true
