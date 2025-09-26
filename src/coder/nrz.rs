@@ -1,5 +1,3 @@
-use crate::util;
-
 use super::{LineCoder, SigElement};
 
 #[derive(Debug, Clone, Copy)]
@@ -10,24 +8,17 @@ pub struct Nrzl {
 
 impl Default for Nrzl {
     fn default() -> Self {
-        Self { tb: 1.0, v: 1.0 }
+        Self {
+            tb: super::GLOB_BASE_TB,
+            v: super::GLOB_BASE_V,
+        }
     }
 }
 
 impl Nrzl {
-    pub fn build(tb: f64, v: f64) -> anyhow::Result<Self> {
-        Ok(Self {
-            tb: util::check_bit_period(tb)?,
-            v: util::check_ampl_closed(v)?,
-        })
-    }
-
-    pub fn set_tb(&mut self, tb: f64) -> bool {
-        let Ok(tb) = util::check_bit_period(tb) else {
-            return false;
-        };
-        self.tb = tb;
-        true
+    #[inline]
+    pub fn new() -> Self {
+        Default::default()
     }
 }
 
@@ -48,16 +39,6 @@ impl LineCoder for Nrzl {
             })
             .collect()
     }
-
-    fn on_tb(&mut self, tb: f64) -> anyhow::Result<()> {
-        self.tb = util::check_bit_period(tb)?;
-        Ok(())
-    }
-
-    fn on_v(&mut self, v: f64) -> anyhow::Result<()> {
-        self.v = util::check_ampl_closed(v)?;
-        Ok(())
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -68,16 +49,17 @@ pub struct Nrzi {
 
 impl Default for Nrzi {
     fn default() -> Self {
-        Self { tb: 1.0, v: 1.0 }
+        Self {
+            tb: super::GLOB_BASE_TB,
+            v: super::GLOB_BASE_V,
+        }
     }
 }
 
 impl Nrzi {
-    pub fn build(tb: f64, v: f64) -> anyhow::Result<Self> {
-        Ok(Self {
-            tb: util::check_bit_period(tb)?,
-            v: util::check_ampl_opened(v)?,
-        })
+    #[inline]
+    pub fn new() -> Self {
+        Default::default()
     }
 }
 
@@ -101,16 +83,6 @@ impl LineCoder for Nrzi {
             })
             .collect()
     }
-
-    fn on_tb(&mut self, tb: f64) -> anyhow::Result<()> {
-        self.tb = util::check_bit_period(tb)?;
-        Ok(())
-    }
-
-    fn on_v(&mut self, v: f64) -> anyhow::Result<()> {
-        self.v = util::check_ampl_opened(v)?;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -118,7 +90,7 @@ mod tests {
     use super::{Nrzi, Nrzl};
     use crate::coder::{LineCoder, SigElement};
 
-    crate::test_len_case!(test_nrzl_len4_cases: Nrzl::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_nrzl_len4_cases: Nrzl::new() => [
         ([0, 0, 0, 0],
             [
                 SigElement::new(0.0, 1.0, -1.0),
@@ -153,42 +125,42 @@ mod tests {
         ),
     ]);
 
-    crate::test_len_case!(test_nrzi_len4_cases: Nrzi::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_nrzi_len4_cases: Nrzi::new() => [
         ([0, 0, 0, 0],
             [
-                SigElement::new(0.0, 1.0, -1.0),
-                SigElement::new(1.0, 2.0, -1.0),
-                SigElement::new(2.0, 3.0, -1.0),
-                SigElement::new(3.0, 4.0, -1.0),
+                SigElement::new(0.0, 1.0, 1.0),
+                SigElement::new(1.0, 2.0, 1.0),
+                SigElement::new(2.0, 3.0, 1.0),
+                SigElement::new(3.0, 4.0, 1.0),
             ]
         ),
         ([1, 1, 1, 1],
             [
-                SigElement::new(0.0, 1.0, 1.0),
-                SigElement::new(1.0, 2.0, -1.0),
-                SigElement::new(2.0, 3.0, 1.0),
-                SigElement::new(3.0, 4.0, -1.0),
+                SigElement::new(0.0, 1.0, -1.0),
+                SigElement::new(1.0, 2.0, 1.0),
+                SigElement::new(2.0, 3.0, -1.0),
+                SigElement::new(3.0, 4.0, 1.0),
             ]
         ),
         ([1, 0, 1, 0],
             [
-                SigElement::new(0.0, 1.0, 1.0),
-                SigElement::new(1.0, 2.0, 1.0),
-                SigElement::new(2.0, 3.0, -1.0),
-                SigElement::new(3.0, 4.0, -1.0),
+                SigElement::new(0.0, 1.0, -1.0),
+                SigElement::new(1.0, 2.0, -1.0),
+                SigElement::new(2.0, 3.0, 1.0),
+                SigElement::new(3.0, 4.0, 1.0),
             ]
         ),
         ([0, 1, 1, 0],
             [
-                SigElement::new(0.0, 1.0, -1.0),
-                SigElement::new(1.0, 2.0, 1.0),
-                SigElement::new(2.0, 3.0, -1.0),
-                SigElement::new(3.0, 4.0, -1.0),
+                SigElement::new(0.0, 1.0, 1.0),
+                SigElement::new(1.0, 2.0, -1.0),
+                SigElement::new(2.0, 3.0, 1.0),
+                SigElement::new(3.0, 4.0, 1.0),
             ],
         ),
     ]);
 
-    crate::test_len_case!(test_nrzl_len6_cases: Nrzl::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_nrzl_len6_cases: Nrzl::new() => [
         ([1, 0, 1, 0, 1, 0],
             [
                 SigElement::new(0.0, 1.0, 1.0),
@@ -211,30 +183,30 @@ mod tests {
         ),
     ]);
 
-    crate::test_len_case!(test_nrzi_len6_cases: Nrzi::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_nrzi_len6_cases: Nrzi::new() => [
         ([1, 0, 1, 0, 1, 0],
             [
-                SigElement::new(0.0, 1.0, 1.0),
-                SigElement::new(1.0, 2.0, 1.0),
-                SigElement::new(2.0, 3.0, -1.0),
-                SigElement::new(3.0, 4.0, -1.0),
-                SigElement::new(4.0, 5.0, 1.0),
-                SigElement::new(5.0, 6.0, 1.0),
-            ]
-        ),
-        ([0, 1, 1, 1, 1, 0],
-            [
                 SigElement::new(0.0, 1.0, -1.0),
-                SigElement::new(1.0, 2.0, 1.0),
-                SigElement::new(2.0, 3.0, -1.0),
+                SigElement::new(1.0, 2.0, -1.0),
+                SigElement::new(2.0, 3.0, 1.0),
                 SigElement::new(3.0, 4.0, 1.0),
                 SigElement::new(4.0, 5.0, -1.0),
                 SigElement::new(5.0, 6.0, -1.0),
             ]
         ),
+        ([0, 1, 1, 1, 1, 0],
+            [
+                SigElement::new(0.0, 1.0, 1.0),
+                SigElement::new(1.0, 2.0, -1.0),
+                SigElement::new(2.0, 3.0, 1.0),
+                SigElement::new(3.0, 4.0, -1.0),
+                SigElement::new(4.0, 5.0, 1.0),
+                SigElement::new(5.0, 6.0, 1.0),
+            ]
+        ),
     ]);
 
-    crate::test_len_case!(test_nrzl_len8_cases: Nrzl::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_nrzl_len8_cases: Nrzl::new() => [
         ([0, 0, 1, 1, 0, 0, 1, 1],
             [
                 SigElement::new(0.0, 1.0, -1.0),
@@ -261,29 +233,29 @@ mod tests {
         ),
     ]);
 
-    crate::test_len_case!(test_nrzi_len8_cases: Nrzi::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_nrzi_len8_cases: Nrzi::new() => [
         ([0, 0, 1, 1, 0, 0, 1, 1],
             [
-                SigElement::new(0.0, 1.0, -1.0),
-                SigElement::new(1.0, 2.0, -1.0),
-                SigElement::new(2.0, 3.0, 1.0),
-                SigElement::new(3.0, 4.0, -1.0),
-                SigElement::new(4.0, 5.0, -1.0),
-                SigElement::new(5.0, 6.0, -1.0),
-                SigElement::new(6.0, 7.0, 1.0),
-                SigElement::new(7.0, 8.0, -1.0),
-            ]
-        ),
-        ([0, 1, 0, 1, 0, 1, 1, 1],
-            [
-                SigElement::new(0.0, 1.0, -1.0),
+                SigElement::new(0.0, 1.0, 1.0),
                 SigElement::new(1.0, 2.0, 1.0),
-                SigElement::new(2.0, 3.0, 1.0),
-                SigElement::new(3.0, 4.0, -1.0),
-                SigElement::new(4.0, 5.0, -1.0),
+                SigElement::new(2.0, 3.0, -1.0),
+                SigElement::new(3.0, 4.0, 1.0),
+                SigElement::new(4.0, 5.0, 1.0),
                 SigElement::new(5.0, 6.0, 1.0),
                 SigElement::new(6.0, 7.0, -1.0),
                 SigElement::new(7.0, 8.0, 1.0),
+            ]
+        ),
+        ([0, 1, 0, 1, 0, 1, 1, 1],
+            [
+                SigElement::new(0.0, 1.0, 1.0),
+                SigElement::new(1.0, 2.0, -1.0),
+                SigElement::new(2.0, 3.0, -1.0),
+                SigElement::new(3.0, 4.0, 1.0),
+                SigElement::new(4.0, 5.0, 1.0),
+                SigElement::new(5.0, 6.0, -1.0),
+                SigElement::new(6.0, 7.0, 1.0),
+                SigElement::new(7.0, 8.0, -1.0),
             ]
         ),
     ]);
@@ -303,19 +275,19 @@ mod tests {
             SigElement::new(8.0, 9.0, 1.0),
         ];
         let exp_i = [
-            SigElement::new(0.0, 1.0, 1.0),
-            SigElement::new(1.0, 2.0, -1.0),
-            SigElement::new(2.0, 3.0, 1.0),
-            SigElement::new(3.0, 4.0, 1.0),
-            SigElement::new(4.0, 5.0, 1.0),
-            SigElement::new(5.0, 6.0, 1.0),
-            SigElement::new(6.0, 7.0, -1.0),
-            SigElement::new(7.0, 8.0, 1.0),
-            SigElement::new(8.0, 9.0, -1.0),
+            SigElement::new(0.0, 1.0, -1.0),
+            SigElement::new(1.0, 2.0, 1.0),
+            SigElement::new(2.0, 3.0, -1.0),
+            SigElement::new(3.0, 4.0, -1.0),
+            SigElement::new(4.0, 5.0, -1.0),
+            SigElement::new(5.0, 6.0, -1.0),
+            SigElement::new(6.0, 7.0, 1.0),
+            SigElement::new(7.0, 8.0, -1.0),
+            SigElement::new(8.0, 9.0, 1.0),
         ];
 
-        let nrzl = Nrzl::build(1.0, 1.0).unwrap();
-        let nrzi = Nrzi::build(1.0, -1.0).unwrap();
+        let nrzl = Nrzl::new();
+        let nrzi = Nrzi::new();
 
         assert_eq!(nrzl.encode(&seq).as_ref(), &exp_l);
         assert_eq!(nrzi.encode(&seq).as_ref(), &exp_i);
@@ -323,17 +295,18 @@ mod tests {
 
     #[test]
     fn test_unarios_len1() {
-        let nrzl = Nrzl::build(1.0, 1.0).unwrap();
-        let nrzi = Nrzi::build(1.0, -1.0).unwrap();
+        let nrzl = Nrzl::new();
+        let nrzi = Nrzi::new();
 
         let s0 = [0u8; 1];
         let e0 = [SigElement::new(0.0, 1.0, -1.0)];
+        let e1 = [SigElement::new(0.0, 1.0, 1.0)];
         assert_eq!(nrzl.encode(&s0).as_ref(), &e0);
-        assert_eq!(nrzi.encode(&s0).as_ref(), &e0);
+        assert_eq!(nrzi.encode(&s0).as_ref(), &e1);
 
         let s1 = [1u8; 1];
         let e1_l = [SigElement::new(0.0, 1.0, 1.0)];
-        let e1_i = [SigElement::new(0.0, 1.0, 1.0)];
+        let e1_i = [SigElement::new(0.0, 1.0, -1.0)];
         assert_eq!(nrzl.encode(&s1).as_ref(), &e1_l);
         assert_eq!(nrzi.encode(&s1).as_ref(), &e1_i);
     }

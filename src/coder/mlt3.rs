@@ -1,5 +1,3 @@
-use crate::util;
-
 use super::{LineCoder, SigElement};
 
 #[derive(Debug, Clone, Copy)]
@@ -10,23 +8,26 @@ pub struct Mlt3 {
 
 impl Default for Mlt3 {
     fn default() -> Self {
-        Self { tb: 1.0, v: 1.0 }
+        Self {
+            tb: super::GLOB_BASE_TB,
+            v: super::GLOB_BASE_V,
+        }
     }
 }
 
 impl Mlt3 {
-    pub fn build(tb: f64, v: f64) -> anyhow::Result<Self> {
-        Ok(Self {
-            tb: util::check_bit_period(tb)?,
-            v: util::check_ampl_closed(v)?,
-        })
+    const CYCLE_BUMP_IDX: usize = 0;
+
+    #[inline]
+    pub fn new() -> Self {
+        Default::default()
     }
 }
 
 impl LineCoder for Mlt3 {
     fn encode(&self, bits: &[u8]) -> Box<[SigElement]> {
         let cycle = [0.0, self.v, 0.0, -self.v];
-        let mut idx = 0;
+        let mut idx = Self::CYCLE_BUMP_IDX;
         let mut t = 0.0;
 
         bits.iter()
@@ -46,23 +47,13 @@ impl LineCoder for Mlt3 {
             })
             .collect()
     }
-
-    fn on_tb(&mut self, tb: f64) -> anyhow::Result<()> {
-        self.tb = util::check_bit_period(tb)?;
-        Ok(())
-    }
-
-    fn on_v(&mut self, v: f64) -> anyhow::Result<()> {
-        self.v = util::check_ampl_closed(v)?;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::coder::{LineCoder, SigElement, mlt3::Mlt3};
 
-    crate::test_len_case!(test_mlt3_len4_cases: Mlt3::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_mlt3_len4_cases: Mlt3::new() => [
         ([0,0,0,0], [
             SigElement::new(0.0,1.0, 0.0),
             SigElement::new(1.0,2.0, 0.0),
@@ -89,7 +80,7 @@ mod tests {
         ]),
     ]);
 
-    crate::test_len_case!(test_mlt3_len6_cases: Mlt3::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_mlt3_len6_cases: Mlt3::new() => [
         ([1,0,1,0,1,0], [
             SigElement::new(0.0,1.0, 1.0),
             SigElement::new(1.0,2.0, 1.0),
@@ -108,7 +99,7 @@ mod tests {
         ]),
     ]);
 
-    crate::test_len_case!(test_mlt3_len8_cases: Mlt3::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_mlt3_len8_cases: Mlt3::new() => [
         ([0,0,1,1,0,0,1,1], [
             SigElement::new(0.0,1.0, 0.0),
             SigElement::new(1.0,2.0, 0.0),
@@ -146,13 +137,13 @@ mod tests {
             SigElement::new(8.0, 9.0, 0.0),
         ];
 
-        let enc = Mlt3::build(1.0, 1.0).unwrap();
+        let enc = Mlt3::new();
         assert_eq!(enc.encode(&seq).as_ref(), &exp);
     }
 
     #[test]
     fn test_mlt3_unarios_len1() {
-        let enc = Mlt3::build(1.0, 1.0).unwrap();
+        let enc = Mlt3::new();
 
         let s0 = [0u8; 1];
         let e0 = [SigElement::new(0.0, 1.0, 0.0)];

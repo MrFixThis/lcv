@@ -5,11 +5,10 @@ pub mod mlt3;
 pub mod nrz;
 pub mod rz;
 
-use std::{
-    any::{Any, TypeId},
-    fmt,
-    fmt::Display,
-};
+use std::any::{Any, TypeId};
+
+const GLOB_BASE_TB: f64 = 1.0;
+const GLOB_BASE_V: f64 = 1.0;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct SigElement {
@@ -42,15 +41,6 @@ impl SigElement {
 pub trait LineCoder: 'static {
     fn encode(&self, bits: &[u8]) -> Box<[SigElement]>;
 
-    fn on_tb(&mut self, tb: f64) -> anyhow::Result<()>;
-
-    fn on_v(&mut self, v: f64) -> anyhow::Result<()>;
-
-    fn on_duty(&mut self, duty: f64) -> anyhow::Result<()> {
-        let _ = duty;
-        Ok(())
-    }
-
     fn boxed(self) -> Box<dyn LineCoder + 'static>
     where
         Self: Sized,
@@ -65,16 +55,9 @@ pub trait LineCoder: 'static {
             None
         }
     }
-
-    unsafe fn downcast_raw_mut(&mut self, id: TypeId) -> Option<*mut ()> {
-        if TypeId::of::<Self>() == id {
-            Some(self as *mut Self as *mut ())
-        } else {
-            None
-        }
-    }
 }
 
+#[allow(unused)]
 impl dyn LineCoder {
     #[inline]
     pub fn is<T: Any>(&self) -> bool {
@@ -91,40 +74,4 @@ impl dyn LineCoder {
             }
         }
     }
-
-    pub fn downcast_mut<T: Any>(&mut self) -> Option<&mut T> {
-        unsafe {
-            let ptr = self.downcast_raw_mut(TypeId::of::<T>())?;
-            if ptr.is_null() {
-                None
-            } else {
-                Some(&mut *(ptr as *mut T))
-            }
-        }
-    }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CoderInitErr {
-    InvalidBitPeriod,
-    BadAmplitude,
-    WrongDuty,
-}
-
-impl CoderInitErr {
-    const INV_BIT_PERIOD_MSG: &str = "Invalid bit period specified. Must be Tb > 0";
-    const BAD_AMPLITUDE_MSG: &str = "Bad amplitude specified";
-    const WRONG_DUTY_MSG: &str = "Wrong duty specified. Must be 0 < duty >= 1";
-}
-
-impl Display for CoderInitErr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CoderInitErr::InvalidBitPeriod => f.pad(Self::INV_BIT_PERIOD_MSG),
-            CoderInitErr::BadAmplitude => f.pad(Self::BAD_AMPLITUDE_MSG),
-            CoderInitErr::WrongDuty => f.pad(Self::WRONG_DUTY_MSG),
-        }
-    }
-}
-
-impl std::error::Error for CoderInitErr {}

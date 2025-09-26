@@ -1,17 +1,17 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    buffer::Buffer,
+    Frame,
     layout::{Alignment, Rect},
     style::Stylize,
     symbols,
     text::{Line, Span},
-    widgets::{Axis, Block, BorderType, Chart, Dataset, GraphType, Widget, WidgetRef},
+    widgets::{Axis, Block, BorderType, Chart, Dataset, GraphType},
 };
 use tokio::{sync::mpsc::UnboundedReceiver, time::Instant};
 
 use crate::coder::SigElement;
 
-use super::{ActiveWidget, style::Theme};
+use super::{ActiveWidget, Ctx, style::Theme};
 
 #[derive(Debug)]
 pub(super) struct Visualizer {
@@ -22,7 +22,7 @@ pub(super) struct Visualizer {
 }
 
 impl Visualizer {
-    const MAX_POINTS_TO_RENDER: usize = 50;
+    const MAX_POINTS_TO_RENDER: usize = 35;
 
     pub(super) fn new(sig_rx: UnboundedReceiver<Box<[SigElement]>>) -> Self {
         Self {
@@ -43,15 +43,15 @@ impl Visualizer {
         self.start_pos = self.start_pos.saturating_sub(1);
     }
 
-    fn create_axis(&self) -> (Axis<'_>, Axis<'_>) {
-        let [(x0, x1), (y0, y1)] = self.find_axis_bounds();
+    fn create_axis(&self) -> (Axis<'_>, Axis<'_>, [(f64, f64); 2]) {
+        let bounds @ [(x0, x1), (y0, y1)] = self.find_axis_bounds();
         let x_axis = Axis::default()
             .title(Line::from_iter([
                 Span::from("Time ").style(Theme::SUB_TITLE),
                 Span::from("(sec)").style(Theme::WARN.italic()),
             ]))
             .bounds([x0, x1])
-            .style(Theme::BORDER_SECONDARY)
+            .style(Theme::BORDER_TERNARY)
             .labels([
                 Line::from(format!("{x0:.1}")).style(Theme::HINT),
                 Line::from(format!("{:.1}", (x0 + x1) / 2.0)).style(Theme::HINT),
@@ -61,14 +61,22 @@ impl Visualizer {
         let y_axis = Axis::default()
             .title(Line::from("Voltage").style(Theme::SUB_TITLE))
             .bounds([y0, y1])
-            .style(Theme::BORDER_SECONDARY)
-            .labels([
-                Line::from(format!("{y0:.1}")).style(Theme::HINT),
-                Line::from(if y0 < 0.0 && y1 > 0.0 { "0" } else { "" }).style(Theme::HINT),
-                Line::from(format!("{y1:.1}")).style(Theme::HINT),
-            ]);
+            .style(Theme::BORDER_TERNARY)
+            .labels(if y0 < 0.0 && y1 > 0.0 {
+                [
+                    Line::from("-V").style(Theme::HINT),
+                    Line::from("0").style(Theme::HINT),
+                    Line::from("+V").style(Theme::HINT),
+                ]
+            } else {
+                [
+                    Line::from("0").style(Theme::HINT),
+                    Line::from("").style(Theme::HINT),
+                    Line::from("+V").style(Theme::HINT),
+                ]
+            });
 
-        (x_axis, y_axis)
+        (x_axis, y_axis, bounds)
     }
 
     fn find_axis_bounds(&self) -> [(f64, f64); 2] {
@@ -90,8 +98,8 @@ impl Visualizer {
             y_max = 1.0;
         }
 
-        let pad_sym = |m: f64| (m * 0.10).max(1e-6);
-        let pad_pos = |span: f64| (span * 0.10).max(1e-6);
+        let pad_sym = |m: f64| (m * 0.1).max(1e-6);
+        let pad_pos = |span: f64| (span * 0.1).max(1e-6);
         let (y0, y1) = if y_min < 0.0 && y_max > 0.0 {
             let m = (y_max.abs().max(y_min.abs())).max(1.0)
                 + pad_sym((y_max.abs().max(y_min.abs())).max(1.0));
@@ -101,7 +109,7 @@ impl Visualizer {
             (-m, m)
         } else {
             let top = if y_max <= 0.0 { 1.0 } else { y_max };
-            (0.0, top + pad_pos((top - 0.0).max(1.0)))
+            (0.0, top + pad_pos(top.max(0.1)))
         };
 
         [(x0, x1), (y0, y1)]
@@ -129,20 +137,25 @@ impl Visualizer {
     }
 }
 
-impl WidgetRef for Visualizer {
-    fn render_ref(&self, area: Rect, buf: &mut Buffer) {
-        let (x_axis, y_axis) = self.create_axis();
+impl ActiveWidget for Visualizer {
+    fn render_ref(&self, ctx: &Ctx<'_>, frame: &mut Frame<'_>, area: Rect) {
+        let (x_axis, y_axis, [_, (y0, y1)]) = self.create_axis();
         let total = self.points.len();
         let n_vis = Self::MAX_POINTS_TO_RENDER.min(total.max(1));
         let start = self.start_pos.min(total.saturating_sub(n_vis));
         let start_inclusive = start.saturating_sub(1);
         let end_exclusive = (start + n_vis).min(total);
         let slice = &self.points[start_inclusive..end_exclusive];
-        let zero_line = slice.iter().map(|(x, _)| (*x, 0.0)).collect::<Box<[_]>>();
+
+        let zero_line = if y0 < 0.0 && y1 > 0.0 {
+            slice.iter().map(|(x, _)| (*x, 0.0)).collect::<Box<[_]>>()
+        } else {
+            Default::default()
+        };
 
         let zero_guide = Dataset::default()
             .graph_type(GraphType::Line)
-            .marker(symbols::Marker::Braille)
+            .marker(symbols::Marker::Dot)
             .style(Theme::TEXT)
             .data(&zero_line);
 
@@ -154,7 +167,11 @@ impl WidgetRef for Visualizer {
 
         let block = Block::bordered()
             .style(Theme::BORDER_PRIMARY)
-            .border_type(BorderType::Thick)
+            .border_type(if ctx.mode.is_visualizer() {
+                BorderType::Double
+            } else {
+                BorderType::Rounded
+            })
             .title_top(
                 Line::from_iter([
                     Span::raw("[ ").style(Theme::BORDER_PRIMARY),
@@ -164,15 +181,15 @@ impl WidgetRef for Visualizer {
                 .alignment(Alignment::Center),
             );
 
-        Chart::new(vec![zero_guide, waveform])
-            .x_axis(x_axis)
-            .y_axis(y_axis)
-            .block(block)
-            .render(area, buf);
+        frame.render_widget(
+            Chart::new(vec![zero_guide, waveform])
+                .x_axis(x_axis)
+                .y_axis(y_axis)
+                .block(block),
+            area,
+        );
     }
-}
 
-impl ActiveWidget for Visualizer {
     fn handle_key(&mut self, key: KeyEvent) {
         if let KeyEvent {
             code,

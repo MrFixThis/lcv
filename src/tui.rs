@@ -4,30 +4,32 @@ mod params;
 mod style;
 mod visualizer;
 
-use std::io::Write;
+use std::marker::PhantomData;
 
 use banner::Banner;
 use crossterm::{
     cursor,
-    event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
+    event::{KeyCode, KeyEvent, KeyEventKind},
     terminal::{EnterAlternateScreen, LeaveAlternateScreen},
 };
 use footer::Footer;
+use params::Parameters;
 use ratatui::{
-    buffer::Buffer,
+    Frame,
     crossterm::terminal,
     layout::{Constraint, Flex, Layout, Rect},
     prelude::CrosstermBackend,
-    widgets::WidgetRef,
 };
 use signal_hook::{consts::signal, low_level};
 use tokio::{sync::mpsc, time::Instant};
 use visualizer::Visualizer;
 
-trait ActiveWidget: WidgetRef {
+trait ActiveWidget {
     fn init(&mut self) {}
 
     fn terminate(&mut self) {}
+
+    fn render_ref(&self, ctx: &Ctx<'_>, frame: &mut Frame<'_>, area: Rect);
 
     fn handle_key(&mut self, key: KeyEvent) {
         let _ = key;
@@ -38,54 +40,10 @@ trait ActiveWidget: WidgetRef {
     }
 }
 
-#[derive(Debug)]
-struct Components {
-    banner: Banner,
-    visualizer: Visualizer,
-    footer: Footer,
-}
-
-impl Components {
-    fn init(&mut self) {
-        self.comps_mut(|comp| comp.init());
-    }
-
-    fn render(&mut self, area: Rect, buf: &mut Buffer) {
-        let [top, middle, bottom] = Layout::vertical([
-            Constraint::Length(10),
-            Constraint::Fill(1),
-            Constraint::Length(1),
-        ])
-        .areas(area);
-        let [_top_left, top_right] =
-            Layout::horizontal([Constraint::Percentage(100), Constraint::Min(35)])
-                .flex(Flex::Start)
-                .areas(top);
-
-        self.banner.render_ref(top_right, buf);
-        self.visualizer.render_ref(middle, buf);
-        self.footer.render_ref(bottom, buf);
-    }
-
-    fn terminate(&mut self) {
-        self.comps_mut(|comp| comp.terminate());
-    }
-
-    fn tick(&mut self, delta: Instant) {
-        self.comps_mut(|comp| comp.tick(delta));
-    }
-
-    fn comps_mut<F>(&mut self, f: F)
-    where
-        F: FnMut(&mut dyn ActiveWidget),
-    {
-        <[&mut dyn ActiveWidget; 3]>::into_iter([
-            &mut self.banner,
-            &mut self.visualizer,
-            &mut self.footer,
-        ])
-        .for_each(f);
-    }
+#[derive(Debug, Clone)]
+struct Ctx<'a> {
+    mode: TuiMode,
+    _phantom: PhantomData<&'a ()>,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -93,12 +51,11 @@ enum TuiMode {
     #[default]
     Params,
     Visualizer,
-    Help,
 }
 
 impl TuiMode {
     #[inline]
-    fn is_parameters(&self) -> bool {
+    fn is_params(&self) -> bool {
         matches!(self, Self::Params)
     }
 
@@ -106,35 +63,30 @@ impl TuiMode {
     fn is_visualizer(&self) -> bool {
         matches!(self, Self::Visualizer)
     }
-
-    #[inline]
-    fn is_help(&self) -> bool {
-        matches!(self, Self::Help)
-    }
 }
 
 #[derive(Debug)]
 pub struct Tui {
-    term: ratatui::Terminal<CrosstermBackend<std::io::Stdout>>,
-    components: Components,
-    should_quit: bool,
+    banner: Banner,
+    params: Parameters,
+    visualizer: Visualizer,
+    footer: Footer,
     mode: TuiMode,
-    _last_mode: TuiMode,
+    should_quit: bool,
+    term: ratatui::Terminal<CrosstermBackend<std::io::Stdout>>,
 }
 
 impl Tui {
     pub fn build() -> anyhow::Result<Self> {
-        let (_sig_tx, sig_rx) = mpsc::unbounded_channel();
+        let (sig_tx, sig_rx) = mpsc::unbounded_channel();
         Ok(Self {
             term: ratatui::Terminal::new(CrosstermBackend::new(std::io::stdout()))?,
-            should_quit: false,
             mode: TuiMode::default(),
-            _last_mode: TuiMode::default(),
-            components: Components {
-                banner: Banner,
-                visualizer: Visualizer::new(sig_rx),
-                footer: Footer,
-            },
+            should_quit: false,
+            params: Parameters::new(sig_tx),
+            banner: Banner,
+            visualizer: Visualizer::new(sig_rx),
+            footer: Footer,
         })
     }
 
@@ -173,23 +125,44 @@ impl Tui {
 
     #[inline]
     pub fn init(&mut self) {
-        self.components.init();
+        self.comps_mut(|comp| comp.init());
     }
 
     #[inline]
     pub fn terminate(&mut self) {
-        self.components.terminate();
+        self.comps_mut(|comp| comp.terminate());
     }
 
     #[inline]
     pub fn tick(&mut self, delta: Instant) {
-        self.components.tick(delta);
+        self.comps_mut(|comp| comp.tick(delta));
     }
 
     pub fn render(&mut self) -> anyhow::Result<()> {
-        self.components
-            .render(self.term.get_frame().area(), self.term.current_buffer_mut());
-        self.flush()
+        self.term.draw(|frame| {
+            let [top, middle, bottom] = Layout::vertical([
+                Constraint::Length(10),
+                Constraint::Fill(1),
+                Constraint::Length(1),
+            ])
+            .areas(frame.area());
+            let [top_left, top_right] =
+                Layout::horizontal([Constraint::Percentage(100), Constraint::Min(35)])
+                    .flex(Flex::Start)
+                    .areas(top);
+
+            let ctx = Ctx {
+                mode: self.mode,
+                _phantom: PhantomData,
+            };
+
+            self.params.render_ref(&ctx, frame, top_left);
+            self.banner.render_ref(&ctx, frame, top_right);
+            self.visualizer.render_ref(&ctx, frame, middle);
+            self.footer.render_ref(&ctx, frame, bottom);
+        })?;
+
+        Ok(())
     }
 
     #[inline]
@@ -201,24 +174,17 @@ impl Tui {
     pub fn handle_key(&mut self, key: KeyEvent) {
         if let KeyEvent {
             code,
-            modifiers,
             kind: KeyEventKind::Press,
             ..
         } = key
         {
             match code {
                 KeyCode::Esc => self.should_quit = true,
-                KeyCode::Tab => self.toggle_help(),
-                KeyCode::Up if modifiers.contains(KeyModifiers::SHIFT) => {
-                    self.swap_mode(TuiMode::Params);
-                }
-                KeyCode::Down if modifiers.contains(KeyModifiers::SHIFT) => {
-                    self.swap_mode(TuiMode::Visualizer);
-                }
+                KeyCode::BackTab => self.swap_mode(TuiMode::Params),
+                KeyCode::Tab => self.swap_mode(TuiMode::Visualizer),
                 _ => match self.mode {
-                    TuiMode::Params => {}
-                    TuiMode::Visualizer => self.components.visualizer.handle_key(key),
-                    TuiMode::Help => {}
+                    TuiMode::Params => self.params.handle_key(key),
+                    TuiMode::Visualizer => self.visualizer.handle_key(key),
                 },
             }
         };
@@ -229,24 +195,22 @@ impl Tui {
         self.should_quit
     }
 
-    fn flush(&mut self) -> anyhow::Result<()> {
-        self.term.flush()?;
-        self.term.swap_buffers();
-        self.term.backend_mut().flush()?;
-        Ok(())
-    }
-
-    fn toggle_help(&mut self) {
-        if self.mode.is_help() {
-            self.swap_mode(self._last_mode);
-        } else {
-            self.swap_mode(TuiMode::Help);
-        }
-    }
-
+    #[inline]
     fn swap_mode(&mut self, mode: TuiMode) {
-        self._last_mode = self.mode;
         self.mode = mode;
         tracing::debug!("TUI mode transitioned to {mode:?}");
+    }
+
+    fn comps_mut<F>(&mut self, f: F)
+    where
+        F: FnMut(&mut dyn ActiveWidget),
+    {
+        <[&mut dyn ActiveWidget; 4]>::into_iter([
+            &mut self.banner,
+            &mut self.params,
+            &mut self.visualizer,
+            &mut self.footer,
+        ])
+        .for_each(f);
     }
 }

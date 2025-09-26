@@ -1,5 +1,3 @@
-use crate::util;
-
 use super::{LineCoder, SigElement};
 
 #[derive(Debug, Clone, Copy)]
@@ -10,16 +8,17 @@ pub struct Hdb3 {
 
 impl Default for Hdb3 {
     fn default() -> Self {
-        Self { tb: 1.0, v: 1.0 }
+        Self {
+            tb: super::GLOB_BASE_TB,
+            v: -super::GLOB_BASE_V,
+        }
     }
 }
 
 impl Hdb3 {
-    pub fn build(tb: f64, v: f64) -> anyhow::Result<Self> {
-        Ok(Self {
-            tb: util::check_bit_period(tb)?,
-            v: util::check_ampl_opened(v)?,
-        })
+    #[inline]
+    pub fn new() -> Self {
+        Default::default()
     }
 }
 
@@ -102,16 +101,6 @@ impl LineCoder for Hdb3 {
 
         out.into_boxed_slice()
     }
-
-    fn on_tb(&mut self, tb: f64) -> anyhow::Result<()> {
-        self.tb = util::check_bit_period(tb)?;
-        Ok(())
-    }
-
-    fn on_v(&mut self, v: f64) -> anyhow::Result<()> {
-        self.v = util::check_ampl_opened(v)?;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -129,7 +118,7 @@ mod tests {
             SigElement::new(3.0, 4.0, 1.0),
         ];
 
-        let enc = Hdb3::build(1.0, -1.0).unwrap();
+        let enc = Hdb3::new();
         assert_eq!(enc.encode(&seq).as_ref(), &expected);
     }
 
@@ -144,7 +133,7 @@ mod tests {
             SigElement::new(4.0, 5.0, 1.0),
         ];
 
-        let enc = Hdb3::build(1.0, -1.0).unwrap();
+        let enc = Hdb3::new();
         assert_eq!(enc.encode(&seq).as_ref(), &expected);
     }
 
@@ -162,7 +151,7 @@ mod tests {
             SigElement::new(7.0, 8.0, 1.0),
         ];
 
-        let enc = Hdb3::build(1.0, -1.0).unwrap();
+        let enc = Hdb3::new();
         assert_eq!(enc.encode(&seq).as_ref(), &expected);
     }
 
@@ -180,7 +169,7 @@ mod tests {
             SigElement::new(7.0, 8.0, -1.0),
         ];
 
-        let enc = Hdb3::build(1.0, -1.0).unwrap();
+        let enc = Hdb3::new();
         assert_eq!(enc.encode(&seq).as_ref(), &expected);
     }
 
@@ -198,7 +187,7 @@ mod tests {
             SigElement::new(7.0, 8.0, 1.0),
         ];
 
-        let enc = Hdb3::build(1.0, -1.0).unwrap();
+        let enc = Hdb3::new();
         assert_eq!(enc.encode(&seq).as_ref(), &expected);
     }
 
@@ -222,13 +211,13 @@ mod tests {
             SigElement::new(13.0, 14.0, 1.0),
         ];
 
-        let enc = Hdb3::build(1.0, -1.0).unwrap();
+        let enc = Hdb3::new();
         assert_eq!(enc.encode(&seq).as_ref(), &expected);
     }
 
     #[test]
     fn test_hdb3_unarios_len1() {
-        let enc = Hdb3::build(1.0, -1.0).unwrap();
+        let enc = Hdb3::new();
 
         let s0 = [0u8; 1];
         let e0 = [SigElement::new(0.0, 1.0, 0.0)];

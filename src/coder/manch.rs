@@ -1,6 +1,4 @@
-use crate::{coder::SigElement, util};
-
-use super::LineCoder;
+use super::{LineCoder, SigElement};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Manchester {
@@ -10,18 +8,19 @@ pub struct Manchester {
 
 impl Default for Manchester {
     fn default() -> Self {
-        Self { tb: 1.0, v: 1.0 }
+        Self {
+            tb: super::GLOB_BASE_TB,
+            v: super::GLOB_BASE_V,
+        }
     }
 }
 
 impl Manchester {
     const DEF_DUTY: f64 = 0.5;
 
-    pub fn build(tb: f64, v: f64) -> anyhow::Result<Self> {
-        Ok(Self {
-            tb: util::check_bit_period(tb)?,
-            v: util::check_ampl_closed(v)?,
-        })
+    #[inline]
+    pub fn new() -> Self {
+        Default::default()
     }
 }
 
@@ -59,23 +58,13 @@ impl LineCoder for Manchester {
 
         out.into_boxed_slice()
     }
-
-    fn on_tb(&mut self, tb: f64) -> anyhow::Result<()> {
-        self.tb = util::check_bit_period(tb)?;
-        Ok(())
-    }
-
-    fn on_v(&mut self, v: f64) -> anyhow::Result<()> {
-        self.v = util::check_ampl_closed(v)?;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::coder::{LineCoder, SigElement, manch::Manchester};
 
-    crate::test_len_case!(test_manchester_len4_cases: Manchester::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_manchester_len4_cases: Manchester::new() => [
         ([0,0,0,0], [
             SigElement::new(0.0,0.5, 1.0),
             SigElement::new(0.5,1.0,-1.0),
@@ -108,7 +97,7 @@ mod tests {
         ]),
     ]);
 
-    crate::test_len_case!(test_manchester_len6_cases: Manchester::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_manchester_len6_cases: Manchester::new() => [
         ([0,1,1,1,1,0], [
             SigElement::new(0.0,0.5, 1.0),
             SigElement::new(0.5,1.0,-1.0),
@@ -139,7 +128,7 @@ mod tests {
         ]),
     ]);
 
-    crate::test_len_case!(test_manchester_len8_cases: Manchester::build(1.0, 1.0).unwrap() => [
+    crate::test_len_case!(test_manchester_len8_cases: Manchester::new() => [
         ([0,0,1,1,0,0,1,1], [
             SigElement::new(0.0,0.5, 1.0),
             SigElement::new(0.5,1.0,-1.0),
@@ -180,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_manchester_unarios_len1() {
-        let enc = Manchester::build(1.0, 1.0).unwrap();
+        let enc = Manchester::new();
 
         let s0 = [0u8; 1];
         let e0 = [

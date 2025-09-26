@@ -1,5 +1,3 @@
-use crate::util;
-
 use super::{LineCoder, SigElement};
 
 #[derive(Debug, Clone, Copy)]
@@ -10,16 +8,17 @@ pub struct Ami {
 
 impl Default for Ami {
     fn default() -> Self {
-        Self { tb: 1.0, v: 1.0 }
+        Self {
+            tb: super::GLOB_BASE_TB,
+            v: -super::GLOB_BASE_V,
+        }
     }
 }
 
 impl Ami {
-    pub fn build(tb: f64, v: f64) -> anyhow::Result<Self> {
-        Ok(Self {
-            tb: util::check_bit_period(tb)?,
-            v: util::check_ampl_opened(v)?,
-        })
+    #[inline]
+    pub fn new() -> Self {
+        Default::default()
     }
 }
 
@@ -46,23 +45,13 @@ impl LineCoder for Ami {
             })
             .collect()
     }
-
-    fn on_tb(&mut self, tb: f64) -> anyhow::Result<()> {
-        self.tb = util::check_bit_period(tb)?;
-        Ok(())
-    }
-
-    fn on_v(&mut self, v: f64) -> anyhow::Result<()> {
-        self.v = util::check_ampl_opened(v)?;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::coder::{LineCoder, SigElement, ami::Ami};
 
-    crate::test_len_case!(test_ami_len4_cases: Ami::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_ami_len4_cases: Ami::new() => [
         ([0,0,0,0], [
             SigElement::new(0.0,1.0, 0.0),
             SigElement::new(1.0,2.0, 0.0),
@@ -83,7 +72,7 @@ mod tests {
         ]),
     ]);
 
-    crate::test_len_case!(test_ami_len6_cases: Ami::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_ami_len6_cases: Ami::new() => [
         ([0,1,1,1,1,0], [
             SigElement::new(0.0,1.0, 0.0),
             SigElement::new(1.0,2.0, 1.0),
@@ -102,7 +91,7 @@ mod tests {
         ]),
     ]);
 
-    crate::test_len_case!(test_ami_len8_cases: Ami::build(1.0, -1.0).unwrap() => [
+    crate::test_len_case!(test_ami_len8_cases: Ami::new() => [
         ([0,0,1,1,0,0,1,1], [
             SigElement::new(0.0,1.0, 0.0),
             SigElement::new(1.0,2.0, 0.0),
@@ -143,13 +132,13 @@ mod tests {
             SigElement::new(11.0, 12.0, 1.0),
         ];
 
-        let enc = Ami::build(1.0, -1.0).unwrap();
+        let enc = Ami::new();
         assert_eq!(enc.encode(&seq).as_ref(), &exp);
     }
 
     #[test]
     fn test_ami_unarios_len1() {
-        let enc = Ami::build(1.0, -1.0).unwrap();
+        let enc = Ami::new();
 
         let s0 = [0u8; 1];
         let e0 = [SigElement::new(0.0, 1.0, 0.0)];

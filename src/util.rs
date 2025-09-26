@@ -5,8 +5,6 @@ use nom::{
     multi::many1,
 };
 
-use crate::coder::CoderInitErr;
-
 #[macro_export]
 macro_rules! test_len_case {
     ($name:ident: $enc:expr => [
@@ -32,33 +30,6 @@ pub fn parse_bits(input: &str) -> Option<Box<[u8]>> {
     .parse(input)
     .map(|(_, bytes)| bytes.into_boxed_slice())
     .ok()
-}
-
-#[inline]
-pub fn check_bit_period(tb: f64) -> anyhow::Result<f64> {
-    anyhow::ensure!(tb.is_finite() && tb > 0.0, CoderInitErr::InvalidBitPeriod);
-    Ok(tb)
-}
-
-#[inline]
-pub fn check_ampl_closed(v: f64) -> anyhow::Result<f64> {
-    anyhow::ensure!(v.is_finite() && v > 0.0, CoderInitErr::BadAmplitude);
-    Ok(v)
-}
-
-#[inline]
-pub fn check_ampl_opened(v: f64) -> anyhow::Result<f64> {
-    anyhow::ensure!(v.is_finite() && v != 0.0, CoderInitErr::BadAmplitude);
-    Ok(v)
-}
-
-#[inline]
-pub fn check_duty(duty: f64) -> anyhow::Result<f64> {
-    anyhow::ensure!(
-        duty.is_finite() && (duty > 0.0 || duty <= 1.0),
-        CoderInitErr::WrongDuty
-    );
-    Ok(duty)
 }
 
 #[cfg(test)]
