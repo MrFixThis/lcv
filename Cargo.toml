@@ -27,7 +27,6 @@ tracing-subscriber = { version = "0.3.20", features = [
 ratatui = { version = "0.29.0", features = ["crossterm", "all-widgets"] }
 tui-input = { version = "0.14.0", default-features = false }
 crossterm = { version = "0.29.0", features = ["windows", "event-stream"] }
-signal-hook = { version = "0.3.18", default-features = false }
 strum = "0.27"
 strum_macros = "0.27"
 directories = "6.0.0"
@@ -35,6 +34,9 @@ anyhow = "1.0.99"
 better-panic = "=0.3.0"
 serde = "1.0.219"
 nom = "8.0.0"
+
+[target.'cfg(not(windows))'.dependencies]
+signal-hook = { version = "0.3.18", default-features = false }
 
 [profile.release]
 lto = true

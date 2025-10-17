@@ -20,7 +20,6 @@ use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
     prelude::CrosstermBackend,
 };
-use signal_hook::{consts::signal, low_level};
 use tokio::{sync::mpsc, time::Instant};
 use visualizer::Visualizer;
 
@@ -119,7 +118,7 @@ impl Tui {
     pub fn suspend(&mut self) -> anyhow::Result<()> {
         self.exit()?;
         #[cfg(not(windows))]
-        low_level::raise(signal::SIGTSTP)?;
+        signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;
         Ok(())
     }
 
