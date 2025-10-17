@@ -1,0 +1,134 @@
+name: Build and Release LCV)
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+
+permissions:
+  contents: write  # needed to create/upload release assets on tags
+
+jobs:
+  build:
+    name: Build ${{ matrix.os_label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            os_label: linux-x86_64
+            artifact_ext: zip
+            bin_path: target/release/lcv
+            zip_cmd: zip
+          - os: macos-latest
+            os_label: macos-arm64
+            artifact_ext: zip
+            bin_path: target/release/lcv
+            zip_cmd: zip
+          - os: windows-latest
+            os_label: windows-x86_64
+            artifact_ext: zip
+            bin_path: target\release\lcv.exe
+            zip_cmd: powershell
+
+    env:
+      # Use tag name on tag builds; otherwise a short SHA snapshot label.
+      VERSION: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('snapshot-{0}', github.sha) }}
+      BIN_NAME: lcv
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Build (release)
+        run: cargo build --release --locked
+
+      - name: Prepare dist folder
+        run: |
+          mkdir -p dist
+
+      # Package for Linux/macOS with 'zip'
+      - name: Package (zip) - *nix
+        if: ${{ matrix.zip_cmd == 'zip' }}
+        shell: bash
+        run: |
+          set -euxo pipefail
+          NAME="${BIN_NAME}-${VERSION}-${{ matrix.os_label }}"
+          STAGE="dist/${NAME}"
+          mkdir -p "${STAGE}"
+          # Copy binary
+          cp "${{ matrix.bin_path }}" "${STAGE}/"
+          chmod +x "${STAGE}/${BIN_NAME}"
+          # Optional extras if present
+          [ -f README.md ] && cp README.md "${STAGE}/"
+          [ -f LICENSE ] && cp LICENSE "${STAGE}/" || true
+          [ -f LICENSE-MIT ] && cp LICENSE-MIT "${STAGE}/" || true
+          [ -f LICENSE-APACHE ] && cp LICENSE-APACHE "${STAGE}/" || true
+          # Create zip
+          (cd dist && zip -r "${NAME}.zip" "${NAME}")
+
+      # Package for Windows with Compress-Archive
+      - name: Package (zip) - Windows
+        if: ${{ matrix.zip_cmd == 'powershell' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $name  = "${env:BIN_NAME}-${env:VERSION}-${{ matrix.os_label }}"
+          $stage = "dist/$name"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "${{ matrix.bin_path }}" "$stage/"
+          if (Test-Path "README.md") { Copy-Item "README.md" "$stage/" }
+          if (Test-Path "LICENSE")   { Copy-Item "LICENSE"   "$stage/" }
+          if (Test-Path "LICENSE-MIT") { Copy-Item "LICENSE-MIT" "$stage/" }
+          if (Test-Path "LICENSE-APACHE") { Copy-Item "LICENSE-APACHE" "$stage/" }
+          Compress-Archive -Path "$stage/*" -DestinationPath "dist/$name.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BIN_NAME }}-${{ env.VERSION }}-${{ matrix.os_label }}.zip
+          path: dist/${{ env.BIN_NAME }}-${{ env.VERSION }}-${{ matrix.os_label }}.zip
+          if-no-files-found: error
+          compression-level: 0  # already zipped
+
+  release:
+    name: Publish Release (on tag)
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Gather asset paths
+        id: gather
+        run: |
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          find dist -type f -name "*.zip" -print >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release & Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: ${{ steps.gather.outputs.files }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

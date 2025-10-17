@@ -5,6 +5,8 @@ edition = "2024"
 authors = ["MrFixThis <mrfixthis55@gmail.com>"]
 description = "Playground for line codes"
 repository = "https://github.com/MrFixThis/lcv"
+readme = "./README.md"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 tokio = { version = "1.47.1", features = [
